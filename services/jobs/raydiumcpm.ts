@@ -36,14 +36,15 @@ export async function runBot() {
   const createPoolOutput = await coder.createPool({
     tokenA,
     tokenB,
-    mintAamount: Math.floor(tokenDetails.supply * 0.99), //deposit 99% supply
+    mintAamount: Math.floor(tokenDetails.supply * 1), //deposit 99% supply
     mintBamount: SOL_AMOUNT_TO_DEPOSIT,
   });
 
   if (!createPoolOutput || !createPoolOutput.txId)
     throw new Error("Pool creation failed");
 
-  const poolId = createPoolOutput.poolId; // Poolid Created from above
+  // || createPoolOutput.poolId;
+  const poolId = "BVMMoUWWshsUjCaJPmweEby83UApjvnrdrG9VjrYNdBm"; // Poolid Created from above
   const lpMint = createPoolOutput.lpMint;
 
   await sleep(5000);
@@ -55,6 +56,7 @@ export async function runBot() {
     lpMint,
     exportedKeyPair.publicKey
   );
+  console.log(LpBalance, "LpBalance", exportedKeyPair.publicKey);
   await coder.withdraw(poolId, LpBalance.toString());
 }
 

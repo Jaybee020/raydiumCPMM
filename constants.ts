@@ -17,7 +17,7 @@ export const tokenDetails = {
   symbol: "EXT",
   uri: "https://example.com/token-metadata.json",
   decimals: 9,
-  supply: 1000000000,
+  supply: 1_000_000_000,
   description: "A sample token used for demonstration purposes.",
   image: "https://example.com/images/token.png",
   twitter: "https://twitter.com/exampletoken",

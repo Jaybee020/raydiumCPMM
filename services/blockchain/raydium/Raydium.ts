@@ -128,6 +128,9 @@ export class RaydiumClient {
       // const uri = await this.umi.uploader.uploadJson(metadata);
       const uri = "";
       console.log(`Successfully uploaded metadata to ${uri}`);
+      const totalSupplyWithDecimals = new Decimal(opts.supply || 10000000000)
+        .mul(10 ** (opts.decimals || 9))
+        .toNumber();
 
       if (cluster == "mainnet") {
         const tx = await createAndMint(this.umi, {
@@ -138,7 +141,7 @@ export class RaydiumClient {
           uri: uri,
           sellerFeeBasisPoints: percentAmount(0),
           decimals: opts.decimals || 6,
-          amount: opts.supply || 1000000_00000000,
+          amount: totalSupplyWithDecimals,
           //@ts-ignore
           tokenOwner: this.wallet.publicKey,
           tokenStandard: TokenStandard.Fungible,
@@ -158,7 +161,7 @@ export class RaydiumClient {
           uri: uri,
           sellerFeeBasisPoints: percentAmount(0),
           decimals: opts.decimals || 6,
-          amount: opts.supply || 1000000_00000000,
+          amount: totalSupplyWithDecimals,
           //@ts-ignore
           tokenOwner: this.wallet.publicKey,
           tokenStandard: TokenStandard.Fungible,
