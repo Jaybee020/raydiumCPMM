@@ -29,7 +29,7 @@ export async function getSPLBalance(
   mintAddress: PublicKey,
   pubKey: PublicKey,
   allowOffCurve = false
-): Promise<bigint> {
+) {
   try {
     const ata = getAssociatedTokenAddressSync(
       mintAddress,
@@ -37,9 +37,10 @@ export async function getSPLBalance(
       allowOffCurve
     );
     const balance = await connection.getTokenAccountBalance(ata, "confirmed");
-    return BigInt(balance.value.uiAmount || 0);
+    return balance.value.uiAmount;
   } catch (error) {
+    console.log(error);
     // Account might not exist, which is fine
-    return BigInt(0);
+    return 0;
   }
 }

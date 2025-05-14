@@ -15,6 +15,7 @@
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
     "@metaplex-foundation/umi": "^1.2.0",
     "@metaplex-foundation/umi-bundle-defaults": "^1.2.0",
+    "@meteora-ag/cp-amm-sdk": "^1.0.2",
     "@raydium-io/raydium-sdk-v2": "^0.1.133-alpha",
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.98.2",

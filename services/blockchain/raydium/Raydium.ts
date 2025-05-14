@@ -113,8 +113,6 @@ export class RaydiumClient {
   }) {
     try {
       const mint = generateSigner(this.umi);
-      // console.log(mint);
-      //help me upload
       const metadata = {
         name: opts.name,
         symbol: opts.symbol,
@@ -125,7 +123,6 @@ export class RaydiumClient {
         telegram: opts.telegram || "",
       };
 
-      // const uri = await this.umi.uploader.uploadJson(metadata);
       const uri = "";
       console.log(`Successfully uploaded metadata to ${uri}`);
       const totalSupplyWithDecimals = new Decimal(opts.supply || 10000000000)
@@ -233,11 +230,6 @@ export class RaydiumClient {
         useSOLBalance: true,
       },
       txVersion: TxVersion.V0,
-      // optional: set up priority fee here
-      // computeBudgetConfig: {
-      //   units: 600000,
-      //   microLamports: 46591500,
-      // },
     });
     const poolKeys: any = Object.keys(extInfo.address).reduce(
       (acc, cur) => ({
@@ -283,8 +275,6 @@ export class RaydiumClient {
     let poolKeys: CpmmKeys | undefined;
 
     if (raydium.cluster === "mainnet") {
-      // note: api doesn't support get devnet pool info, so in devnet else we go rpc method
-      // if you wish to get pool info from rpc, also can modify logic to go rpc method directly
       const data = await raydium.api.fetchPoolById({ ids: poolId });
       poolInfo = data[0] as ApiV3PoolInfoStandardItemCpmm;
       if (!isValidCpmm(poolInfo.programId))
@@ -308,23 +298,7 @@ export class RaydiumClient {
       slippage,
       baseIn,
       txVersion: TxVersion.V0,
-      // optional: set up priority fee here
-      // computeBudgetConfig: {
-      //   units: 600000,
-      //   microLamports: 46591500,
-      // },
-
-      // optional: add transfer sol to tip account instruction. e.g sent tip to jito
-      // txTipConfig: {
-      //   address: new PublicKey('96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5'),
-      //   amount: new BN(10000000), // 0.01 sol
-      // },
     });
-    // don't want to wait confirm, set sendAndConfirm to false or don't pass any params to execute
-    // const { txId } = await execute({ sendAndConfirm: true })
-    // console.log('pool deposited', { txId: `https://explorer.solana.com/tx/${txId}` })
-    // process.exit() // if you don't want to end up node execution, comment this line
-
     const { txId } = await execute({ sendAndConfirm: true });
     console.log(`pool deposited`, {
       txId,
@@ -345,8 +319,6 @@ export class RaydiumClient {
     let poolKeys: CpmmKeys | undefined;
 
     if (raydium.cluster === "mainnet") {
-      // note: api doesn't support get devnet pool info, so in devnet else we go rpc method
-      // if you wish to get pool info from rpc, also can modify logic to go rpc method directly
       const data = await raydium.api.fetchPoolById({ ids: poolId });
       poolInfo = data[0] as ApiV3PoolInfoStandardItemCpmm;
       if (!isValidCpmm(poolInfo.programId))
@@ -366,22 +338,8 @@ export class RaydiumClient {
       lpAmount: inputamount,
       txVersion: TxVersion.V0,
       slippage,
-
-      // closeWsol: false, // default if true, if you want use wsol, you need set false
-
-      // optional: set up priority fee here
-      // computeBudgetConfig: {
-      //   units: 600000,
-      //   microLamports: 46591500,
-      // },
-      // optional: add transfer sol to tip account instruction. e.g sent tip to jito
-      // txTipConfig: {
-      //   address: new PublicKey('96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5'),
-      //   amount: new BN(10000000), // 0.01 sol
-      // },
     });
 
-    // don't want to wait confirm, set sendAndConfirm to false or don't pass any params to execute
     if (cluster == "mainnet") {
       const { txId } = await execute({ sendAndConfirm: true });
       console.log("pool withdraw:", {
@@ -389,8 +347,6 @@ export class RaydiumClient {
       });
 
       return { txId };
-
-      // await execute();
     } else {
       const { txId } = await execute();
       console.log("pool withdraw:", {
@@ -398,8 +354,6 @@ export class RaydiumClient {
       });
 
       return { txId };
-
-      // await execute();
     }
   }
 }
