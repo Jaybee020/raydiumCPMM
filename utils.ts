@@ -9,3 +9,7 @@ const VALID_PROGRAM_ID = new Set([
 ]);
 
 export const isValidCpmm = (id: string) => VALID_PROGRAM_ID.has(id);
+
+export function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

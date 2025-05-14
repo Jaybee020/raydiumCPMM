@@ -8,15 +8,12 @@ import {
   signerIdentity,
   Umi,
 } from "@metaplex-foundation/umi";
-
-import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import {
   createAndMint,
-  createV1,
-  findMetadataPda,
   mplTokenMetadata,
   TokenStandard,
 } from "@metaplex-foundation/mpl-token-metadata";
+import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import {
   ApiV3PoolInfoStandardItemCpmm,
   CpmmKeys,
@@ -31,6 +28,7 @@ import {
   TxVersion,
 } from "@raydium-io/raydium-sdk-v2";
 import {
+  cluster,
   exportedKeyPair,
   initSdk,
   keypair,
@@ -83,7 +81,6 @@ export class RaydiumClient {
 
   constructor(walletSecret: number[]) {
     this.connection = rpcConnection;
-    console.log(SOLANA_RPC_URL);
 
     this.umi = createUmi(SOLANA_RPC_URL).use(mplTokenMetadata());
     const userWallet = this.umi.eddsa.createKeypairFromSecretKey(
@@ -108,33 +105,75 @@ export class RaydiumClient {
     uri: string;
     decimals?: number;
     supply?: number;
+    description?: string;
+    image?: string;
+    twitter?: string;
+    telegram?: string;
+    website?: string;
   }) {
-    const mint = generateSigner(this.umi);
-    console.log(mint);
-    createAndMint(this.umi, {
-      mint,
-      authority: this.umi.identity,
-      name: opts.name,
-      symbol: opts.symbol,
-      uri: opts.uri,
-      sellerFeeBasisPoints: percentAmount(0),
-      decimals: opts.decimals || 6,
-      amount: opts.supply || 1000000_00000000,
-      //@ts-ignore
-      tokenOwner: this.wallet.publicKey,
-      tokenStandard: TokenStandard.Fungible,
-    })
-      .sendAndConfirm(this.umi)
-      .then(() => {
+    try {
+      const mint = generateSigner(this.umi);
+      // console.log(mint);
+      //help me upload
+      const metadata = {
+        name: opts.name,
+        symbol: opts.symbol,
+        description: opts.description || "",
+        image: opts.image || "",
+        website: opts.website || "",
+        twitter: opts.twitter || "",
+        telegram: opts.telegram || "",
+      };
+
+      // const uri = await this.umi.uploader.uploadJson(metadata);
+      const uri = "";
+      console.log(`Successfully uploaded metadata to ${uri}`);
+
+      if (cluster == "mainnet") {
+        const tx = await createAndMint(this.umi, {
+          mint,
+          authority: this.umi.identity,
+          name: opts.name,
+          symbol: opts.symbol,
+          uri: uri,
+          sellerFeeBasisPoints: percentAmount(0),
+          decimals: opts.decimals || 6,
+          amount: opts.supply || 1000000_00000000,
+          //@ts-ignore
+          tokenOwner: this.wallet.publicKey,
+          tokenStandard: TokenStandard.Fungible,
+        }).sendAndConfirm(this.umi);
         console.log(
           "Successfully minted 1 million tokens (",
           mint.publicKey,
           ")"
         );
-      })
-      .catch((err) => {
-        console.error("Error minting tokens:", err);
-      });
+        return { mintAddress: mint.publicKey.toString(), txId: tx.signature };
+      } else {
+        const tx = await createAndMint(this.umi, {
+          mint,
+          authority: this.umi.identity,
+          name: opts.name,
+          symbol: opts.symbol,
+          uri: uri,
+          sellerFeeBasisPoints: percentAmount(0),
+          decimals: opts.decimals || 6,
+          amount: opts.supply || 1000000_00000000,
+          //@ts-ignore
+          tokenOwner: this.wallet.publicKey,
+          tokenStandard: TokenStandard.Fungible,
+          feePayer: this.umi.identity,
+        }).send(this.umi);
+        console.log(
+          "Successfully minted 1 million tokens (",
+          mint.publicKey,
+          ")"
+        );
+        return { mintAddress: mint.publicKey.toString(), txId: tx };
+      }
+    } catch (error) {
+      console.error("Error minting tokens:", error);
+    }
   }
 
   /**
@@ -170,7 +209,6 @@ export class RaydiumClient {
     const inputBAmount = new BN(
       new Decimal(opts.mintBamount).mul(10 ** mintB.decimals).toFixed(0)
     );
-    console.log(raydium.cluster);
     const { execute, extInfo } = await raydium.cpmm.createPool({
       // poolId: // your custom publicKey, default sdk will automatically calculate pda pool id
       programId:
@@ -198,30 +236,36 @@ export class RaydiumClient {
       //   microLamports: 46591500,
       // },
     });
+    const poolKeys: any = Object.keys(extInfo.address).reduce(
+      (acc, cur) => ({
+        ...acc,
+        [cur]: extInfo.address[cur as keyof typeof extInfo.address].toString(),
+      }),
+      {}
+    );
 
-    // don't want to wait confirm, set sendAndConfirm to false or don't pass any params to execute\
-    console.log("pool created", {
-      poolKeys: Object.keys(extInfo.address).reduce(
-        (acc, cur) => ({
-          ...acc,
-          [cur]:
-            extInfo.address[cur as keyof typeof extInfo.address].toString(),
-        }),
-        {}
-      ),
-    });
-    const { txId } = await execute();
-    console.log("pool created", {
-      txId,
-      poolKeys: Object.keys(extInfo.address).reduce(
-        (acc, cur) => ({
-          ...acc,
-          [cur]:
-            extInfo.address[cur as keyof typeof extInfo.address].toString(),
-        }),
-        {}
-      ),
-    });
+    if (cluster == "devnet") {
+      const { txId } = await execute();
+      console.log("pool created", {
+        txId,
+        poolKeys,
+      });
+      return {
+        poolId: poolKeys?.poolId,
+        txId,
+      };
+    } else {
+      const { txId } = await execute({ sendAndConfirm: true });
+      console.log("pool created", {
+        txId,
+        poolKeys,
+      });
+      return {
+        poolId: poolKeys?.poolId,
+        lpMint: poolKeys?.lpMint,
+        txId,
+      };
+    }
   }
 
   /**
@@ -230,7 +274,7 @@ export class RaydiumClient {
    * @param tokenMint - which token side (base or quote)
    * @param amount - amount in raw units
    */
-  async deposit(poolId: string, amount: string): Promise<void> {
+  async deposit(poolId: string, amount: string) {
     const raydium = await initSdk();
     let poolInfo: ApiV3PoolInfoStandardItemCpmm;
     let poolKeys: CpmmKeys | undefined;
@@ -282,6 +326,8 @@ export class RaydiumClient {
     console.log(`pool deposited`, {
       txId,
     });
+
+    return { txId };
   }
 
   /**
@@ -289,7 +335,7 @@ export class RaydiumClient {
    * @param poolId - PublicKey string of the pool
    * @param lpAmount - amount of LP tokens to burn
    */
-  async withdraw(poolId: string, lpAmount: string): Promise<void> {
+  async withdraw(poolId: string, lpAmount: string) {
     const raydium = await initSdk();
 
     let poolInfo: ApiV3PoolInfoStandardItemCpmm;
@@ -333,11 +379,24 @@ export class RaydiumClient {
     });
 
     // don't want to wait confirm, set sendAndConfirm to false or don't pass any params to execute
-    const { txId } = await execute({ sendAndConfirm: true });
-    console.log("pool withdraw:", {
-      txId: `${txId}`,
-    });
+    if (cluster == "mainnet") {
+      const { txId } = await execute({ sendAndConfirm: true });
+      console.log("pool withdraw:", {
+        txId: `${txId}`,
+      });
 
-    // await execute();
+      return { txId };
+
+      // await execute();
+    } else {
+      const { txId } = await execute();
+      console.log("pool withdraw:", {
+        txId: `${txId}`,
+      });
+
+      return { txId };
+
+      // await execute();
+    }
   }
 }
