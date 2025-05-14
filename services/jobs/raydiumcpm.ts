@@ -1,14 +1,16 @@
 import Queue from "bull";
 import {
+  exportedKeyPair,
   keypair,
   REDIS_URL,
+  rpcConnection,
   SOL_AMOUNT_TO_DEPOSIT,
   SOL_MINT,
   tokenDetails,
 } from "../../constants";
 import { RaydiumClient } from "../blockchain/raydium/Raydium";
 import { CronJob } from "cron";
-import { sleep } from "../../utils";
+import { getSPLBalance, sleep } from "../../utils";
 
 export const txQueue = new Queue(
   "txQueue",
@@ -34,7 +36,7 @@ export async function runBot() {
   const createPoolOutput = await coder.createPool({
     tokenA,
     tokenB,
-    mintAamount: tokenDetails.supply, //deposit all supply
+    mintAamount: Math.floor(tokenDetails.supply * 0.99), //deposit 99% supply
     mintBamount: SOL_AMOUNT_TO_DEPOSIT,
   });
 
@@ -42,12 +44,18 @@ export async function runBot() {
     throw new Error("Pool creation failed");
 
   const poolId = createPoolOutput.poolId; // Poolid Created from above
+  const lpMint = createPoolOutput.lpMint;
 
   await sleep(5000);
 
   //     await coder.deposit(poolId, "1");
   //how do I get amount of LP to remove
-  await coder.withdraw(poolId, "7");
+  const LpBalance = await getSPLBalance(
+    rpcConnection,
+    lpMint,
+    exportedKeyPair.publicKey
+  );
+  await coder.withdraw(poolId, LpBalance.toString());
 }
 
 //Consumer queue process to be performed in background
