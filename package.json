@@ -1,0 +1,24 @@
+{
+  "name": "raydiumcpmm",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx ts-node main.ts",
+    "start": "npx tsc && node main.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+    "@metaplex-foundation/umi": "^1.2.0",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.2.0",
+    "@raydium-io/raydium-sdk-v2": "^0.1.133-alpha",
+    "@solana/web3.js": "^1.98.2",
+    "decimal.js": "^10.5.0",
+    "dotenv": "^16.5.0",
+    "ts-node": "^10.9.2"
+  }
+}
