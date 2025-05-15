@@ -30,7 +30,7 @@ export function setupApi(port: string | number): void {
   });
 
   app.listen(port, async () => {
-    await runBotMeteora();
+    // await runBotMeteora();
     console.log(`API server listening on port ${port}`);
     console.log(
       `Bot state available at http://localhost:${port}/api/bot-state`
