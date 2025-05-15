@@ -24,9 +24,10 @@ import {
 import {
   CpAmm,
   derivePoolAddress,
+  derivePositionAddress,
   derivePositionNftAccount,
 } from "@meteora-ag/cp-amm-sdk";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { getLatestBlockhash, uploadMetadata } from "../../../utils";
 
 TOKEN_PROGRAM_ID;
@@ -278,7 +279,6 @@ export class MeteorClient {
 
       // Get pool and position states
       const poolState = await this.cpAmm.fetchPoolState(pool);
-      const positionState = await this.cpAmm.fetchPositionState(position);
 
       // Calculate liquidity delta based on token amounts
       const { liquidityDelta } = this.cpAmm.getDepositQuote({
@@ -290,21 +290,14 @@ export class MeteorClient {
       });
 
       // Find the position NFT account
-      const positionNftAccount = await this.connection.getTokenAccountsByOwner(
-        this.wallet.publicKey,
-        { mint: positionState.nftMint }
-      );
-
-      if (positionNftAccount.value.length === 0) {
-        throw new Error("Position NFT account not found");
-      }
+      const positionNftAccount = derivePositionNftAccount(position);
 
       // Add liquidity
       const addLiquidityTx = await this.cpAmm.addLiquidity({
         owner: this.wallet.publicKey,
         pool,
         position,
-        positionNftAccount: positionNftAccount.value[0].pubkey,
+        positionNftAccount: positionNftAccount,
         liquidityDelta,
         maxAmountTokenA: new BN(tokenAAmount),
         maxAmountTokenB: new BN(tokenBAmount),
@@ -338,17 +331,18 @@ export class MeteorClient {
   async removeAllLiquidity(poolId: string, positionId: string) {
     try {
       const pool = new PublicKey(poolId);
-      const position = new PublicKey(positionId);
+      const positionNft = new PublicKey(positionId);
 
       const poolState = await this.cpAmm.fetchPoolState(pool);
 
-      console.log(derivePositionNftAccount(position));
+      const position = derivePositionAddress(positionNft);
+      console.log(position);
       // Remove all liquidity
       const removeAllLiquidityTx = await this.cpAmm.removeAllLiquidity({
         owner: this.wallet.publicKey,
         pool,
         position,
-        positionNftAccount: derivePositionNftAccount(position),
+        positionNftAccount: derivePositionNftAccount(positionNft),
         tokenAAmountThreshold: new BN(0), // No minimum threshold
         tokenBAmountThreshold: new BN(0), // No minimum threshold
         tokenAMint: poolState.tokenAMint,
@@ -379,9 +373,10 @@ export class MeteorClient {
    */
   async closePosition(poolId: string, positionId: string) {
     try {
-      const position = new PublicKey(positionId);
+      const positionNft = new PublicKey(positionId);
 
-      const positionNftAccount = derivePositionNftAccount(position);
+      const position = derivePositionAddress(positionNft);
+      const positionNftAccount = derivePositionNftAccount(positionNft);
 
       // const positionNftAccount = await this.connection.getTokenAccountsByOwner(
       //   this.wallet.publicKey,
@@ -396,7 +391,7 @@ export class MeteorClient {
         owner: this.wallet.publicKey,
         pool: new PublicKey(poolId),
         position,
-        positionNftMint: position,
+        positionNftMint: positionNft,
         positionNftAccount: positionNftAccount,
       });
 
@@ -411,6 +406,73 @@ export class MeteorClient {
       throw error;
     }
   }
+
+  /**
+   * Removes all liquidity from a position and then closes it in one operation
+   * @param poolId - ID of the pool
+   * @param positionId - ID of the position NFT
+   */
+  async removeAllLiquidityAndClosePosition(poolId: string, positionId: string) {
+    try {
+      const pool = new PublicKey(poolId);
+      const positionNft = new PublicKey(positionId);
+
+      // Derive the position account from the position NFT mint
+      const position = derivePositionAddress(positionNft);
+      const positionNftAccount = derivePositionNftAccount(positionNft);
+
+      // Get pool state and position state
+      const poolState = await this.cpAmm.fetchPoolState(pool);
+      const positionState = await this.cpAmm.fetchPositionState(position);
+
+      // Check if position has any liquidity
+      const totalLiquidity = positionState.unlockedLiquidity
+        .add(positionState.vestedLiquidity)
+        .add(positionState.permanentLockedLiquidity);
+
+      if (totalLiquidity.isZero()) {
+        // If no liquidity, just close the position
+        console.log("Position has no liquidity, proceeding to close");
+        const closePositionTx = await this.cpAmm.closePosition({
+          owner: this.wallet.publicKey,
+          pool,
+          position,
+          positionNftMint: positionNft,
+          positionNftAccount,
+        });
+
+        const txId = await this.signAndBroadcastTx(closePositionTx);
+        console.log("Position closed", { txId });
+        return { txId };
+      }
+
+      // Position has liquidity, we need to remove it first then close
+      console.log("Position has liquidity, removing liquidity then closing");
+
+      // Use the SDK's built-in removeAllLiquidityAndClosePosition method which does both operations in one transaction
+      const tx = await this.cpAmm.removeAllLiquidityAndClosePosition({
+        owner: this.wallet.publicKey,
+        position,
+        positionNftAccount,
+        positionState,
+        poolState,
+        tokenAAmountThreshold: new BN(0),
+        tokenBAmountThreshold: new BN(0),
+        vestings: [], // If there are any vestings, you would get them using getAllVestingsByPosition
+        currentPoint: new BN(Math.floor(Date.now() / 1000)), // Current timestamp in seconds
+      });
+
+      const txId = await this.signAndBroadcastTx(tx);
+      console.log("Successfully removed liquidity and closed position", {
+        txId,
+      });
+      return { txId };
+    } catch (error) {
+      console.error("Error removing liquidity and closing position:", error);
+      throw error;
+    }
+  }
+  // Can you help me write a meteora client function that cremoves liquidity and closes all accounts at once
 
   async signAndBroadcastTx(tx: Transaction, otherSigner?: Keypair) {
     const blockhash = await getLatestBlockhash();

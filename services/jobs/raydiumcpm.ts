@@ -69,17 +69,17 @@ export async function runBotMeteora() {
   console.log("Started Job Meteora");
   const coder = new MeteorClient(keypair.secretKey as any);
 
-  // const createTokenOutput = await coder.createTokenWithMetadata(tokenDetails);
-  // if (
-  //   !createTokenOutput ||
-  //   !createTokenOutput.mintAddress ||
-  //   !createTokenOutput.txId
-  // )
-  //   throw new Error("Token creation failed");
+  const createTokenOutput = await coder.createTokenWithMetadata(tokenDetails);
+  if (
+    !createTokenOutput ||
+    !createTokenOutput.mintAddress ||
+    !createTokenOutput.txId
+  )
+    throw new Error("Token creation failed");
 
-  // await sleep(5000);
+  await sleep(5000);
 
-  const tokenA = "AvofckpAemUUpW4WAT2yEugxaUMpM1gsePr8P54Netwk"; //createTokenOutput.mintAddress; //token Address of token deployed from above
+  const tokenA = createTokenOutput.mintAddress; //"AvofckpAemUUpW4WAT2yEugxaUMpM1gsePr8P54Netwk"; //createTokenOutput.mintAddress; //token Address of token deployed from above
   const tokenB = SOL_MINT;
   const createPoolOutput = await coder.createPool({
     tokenA,
@@ -94,7 +94,7 @@ export async function runBotMeteora() {
   const poolId = createPoolOutput.poolId; // Poolid Created from above
   const positionId = createPoolOutput.positionId;
 
-  await sleep(5000);
+  // await sleep(5000);
 
   // const poolId = "BV8gSML8N8xFSrCdJKU59yMbdZaFgQexNnxLiPsfC1S7";
   // const lpMint = "AKgJoE2jeHvRKHeirYNzofvzF1p1H7sDC7spbmMMfjxS";
@@ -108,8 +108,9 @@ export async function runBotMeteora() {
   // );
   //how do I get amount of LP to remove
 
-  await coder.removeAllLiquidity(poolId, positionId);
+  // await coder.removeAllLiquidity(poolId, positionId);
   // await coder.closePosition(poolId, positionId);
+  await coder.removeAllLiquidityAndClosePosition(poolId, positionId);
 }
 
 //Consumer queue process to be performed in background
