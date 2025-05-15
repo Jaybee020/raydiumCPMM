@@ -13,6 +13,9 @@ export const RAYDIUM_PROGRAM_ID = new PublicKey(
   "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
 );
 
+
+
+
 export const tokenDetails = {
   name: "Example Token",
   symbol: "EXT",
@@ -20,13 +23,27 @@ export const tokenDetails = {
   decimals: 9,
   supply: 1_000_000_000,
   description: "A sample token used for demonstration purposes.",
-  image: "https://example.com/images/token.png",
-  twitter: "https://twitter.com/exampletoken",
-  telegram: "https://t.me/exampletoken",
-  website: "https://exampletoken.io",
+
+
+
+
+
 };
 
-export const SOL_AMOUNT_TO_DEPOSIT = 0.005;
+export const perpTokenConfig = {
+  uri: "./metadata.json", // URI for the PERP token metadata
+  decimals: 9, // Decimals for the new PERP tokens
+  supply: 1_000_000_000, // Initial and total supply of each PERP token (in whole units)
+  description: "A sample token used for demonstration purposes.",
+  image: "https://res.cloudinary.com/seyi-codes/image/upload/v1747102661/APbP7hYraQeMQ4y8apApy3zeeHCkNcd6_v1qvcj.png",
+  twitter: "https://x.com/PerpRug",
+  telegram: "https://t.me/PerpRug",
+  website: "https://perprug.fun",
+
+};
+
+export const SOL_AMOUNT_TO_DEPOSIT_METEORA = 0.7;
+export const PERP_TOKEN_DEPOSIT_PERCENTAGE = 0.10; // e.g., deposit 99% of the new PERP token
 export const TOKENA_PROGRAM_ID = TOKEN_PROGRAM_ID;
 export const TOKENB_PROGRAM_ID = TOKEN_PROGRAM_ID;
 

@@ -19,13 +19,20 @@
     "@raydium-io/raydium-sdk-v2": "^0.1.133-alpha",
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.98.2",
+    "@types/cors": "^2.8.18",
+    "@types/cron": "^2.0.1",
+    "@types/express": "^5.0.1",
     "bull": "^4.16.5",
+    "cors": "^2.8.5",
     "cron": "^4.3.0",
     "decimal.js": "^10.5.0",
     "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "fs": "^0.0.1-security",
     "i": "^0.3.7",
     "npm": "^10.9.2",
     "pinata": "^2.3.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }
