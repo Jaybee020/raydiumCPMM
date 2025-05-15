@@ -5,6 +5,7 @@ import { PublicKey } from "@solana/web3.js";
 
 import { config } from "dotenv";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 config();
 
@@ -25,7 +26,9 @@ export const tokenDetails = {
   website: "https://exampletoken.io",
 };
 
-export const SOL_AMOUNT_TO_DEPOSIT = 0.5;
+export const SOL_AMOUNT_TO_DEPOSIT = 0.005;
+export const TOKENA_PROGRAM_ID = TOKEN_PROGRAM_ID;
+export const TOKENB_PROGRAM_ID = TOKEN_PROGRAM_ID;
 
 export const SOLANA_RPC_URL =
   process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";

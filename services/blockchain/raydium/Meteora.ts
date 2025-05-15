@@ -1,6 +1,6 @@
 // meteor_client.ts
 
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import {
   createSignerFromKeypair,
   generateSigner,
@@ -14,13 +14,20 @@ import {
   TokenStandard,
 } from "@metaplex-foundation/mpl-token-metadata";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
-import Queue from "bull";
-import { CronJob } from "cron";
 import { BN } from "@coral-xyz/anchor";
-import { rpcConnection, SOLANA_RPC_URL } from "../../../constants";
-import { CpAmm, PoolFeesParams } from "@meteora-ag/cp-amm-sdk";
+import {
+  rpcConnection,
+  SOLANA_RPC_URL,
+  TOKENA_PROGRAM_ID,
+  TOKENB_PROGRAM_ID,
+} from "../../../constants";
+import {
+  CpAmm,
+  derivePoolAddress,
+  derivePositionNftAccount,
+} from "@meteora-ag/cp-amm-sdk";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { uploadMetadata } from "../../../utils";
+import { getLatestBlockhash, uploadMetadata } from "../../../utils";
 
 TOKEN_PROGRAM_ID;
 export class MeteorClient {
@@ -124,7 +131,6 @@ export class MeteorClient {
       // Generate a new keypair for the position NFT
       const positionNftKeypair = Keypair.generate();
 
-      // First, get a configuration account from the available configs
       const configs = await this.cpAmm.getAllConfigs();
       if (configs.length === 0) {
         throw new Error("No configuration accounts found");
@@ -148,76 +154,103 @@ export class MeteorClient {
       const tokenBDecimals = tokenBInfo.value?.data.parsed.info.decimals || 9;
 
       // Calculate initial price (tokenB per tokenA)
-      const initPrice =
-        (opts.mintBamount / opts.mintAamount) *
-        10 ** (tokenADecimals - tokenBDecimals);
+      // const initPrice =
+      //   (opts.mintBamount / opts.mintAamount) *
+      //   10 ** (tokenADecimals - tokenBDecimals);
+
+      // const { initSqrtPrice, liquidityDelta } =
+      //   this.cpAmm.preparePoolCreationParams({
+      //     tokenAAmount: tokenAAmount,
+      //     tokenBAmount: tokenBAmount,
+      //     minSqrtPrice: configState.sqrtMinPrice,
+      //     maxSqrtPrice: configState.sqrtMaxPrice,
+      //   });
+
+      // // Create a custom pool
+      // const poolFees: PoolFeesParams = {
+      //   baseFee: {
+      //     feeSchedulerMode: 0, // Linear
+      //     cliffFeeNumerator: new BN(500000), // 0.5% fee (denominator is 10^8)
+      //     numberOfPeriod: 0,
+      //     reductionFactor: new BN(0),
+      //     periodFrequency: new BN(0),
+      //   },
+      //   protocolFeePercent: 0,
+      //   partnerFeePercent: 0,
+      //   referralFeePercent: 0,
+      //   dynamicFee: null,
+      // };
+
+      // const { tx, pool, position } = await this.cpAmm.createCustomPool({
+      //   payer: this.wallet.publicKey,
+      //   creator: this.wallet.publicKey,
+      //   positionNft: positionNftKeypair.publicKey,
+      //   tokenAMint: tokenAMint,
+      //   tokenBMint: tokenBMint,
+      //   tokenAAmount: tokenAAmount,
+      //   tokenBAmount: tokenBAmount,
+      //   sqrtMinPrice: configState.sqrtMinPrice,
+      //   sqrtMaxPrice: configState.sqrtMaxPrice,
+      //   initSqrtPrice,
+      //   liquidityDelta,
+      //   poolFees,
+      //   hasAlphaVault: false,
+      //   collectFeeMode: 0,
+      //   activationPoint: new BN(0),
+      //   activationType: 0,
+      //   tokenAProgram:
+      //     opts.tokenAProgram ||
+      //     new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+      //   tokenBProgram:
+      //     opts.tokenBProgram ||
+      //     new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+      // });
 
       // Prepare parameters for pool creation
+      const mintAmount = new BN(opts.mintAamount);
+      const decimals = new BN(10).pow(new BN(tokenADecimals));
+      const tokenAAmount = mintAmount.mul(decimals);
+      const tokenBAmount = new BN(opts.mintBamount * 10 ** tokenBDecimals);
+      const pool = derivePoolAddress(configAccount, tokenAMint, tokenBMint);
       const { initSqrtPrice, liquidityDelta } =
         this.cpAmm.preparePoolCreationParams({
-          tokenAAmount: new BN(opts.mintAamount * 10 ** tokenADecimals),
-          tokenBAmount: new BN(opts.mintBamount * 10 ** tokenBDecimals),
+          tokenAAmount: tokenAAmount,
+          tokenBAmount: tokenBAmount,
           minSqrtPrice: configState.sqrtMinPrice,
           maxSqrtPrice: configState.sqrtMaxPrice,
         });
 
-      // Create a custom pool
-      const poolFees: PoolFeesParams = {
-        baseFee: {
-          feeSchedulerMode: 0, // Linear
-          cliffFeeNumerator: new BN(500000), // 0.5% fee (denominator is 10^8)
-          numberOfPeriod: 0,
-          reductionFactor: new BN(0),
-          periodFrequency: new BN(0),
-        },
-        protocolFeePercent: 0,
-        partnerFeePercent: 0,
-        referralFeePercent: 0,
-        dynamicFee: null,
-      };
-
-      const { tx, pool, position } = await this.cpAmm.createCustomPool({
+      const createPoolTx = await this.cpAmm.createPool({
         payer: this.wallet.publicKey,
         creator: this.wallet.publicKey,
+        config: configAccount,
         positionNft: positionNftKeypair.publicKey,
-        tokenAMint: tokenAMint,
-        tokenBMint: tokenBMint,
-        tokenAAmount: new BN(opts.mintAamount * 10 ** tokenADecimals),
-        tokenBAmount: new BN(opts.mintBamount * 10 ** tokenBDecimals),
-        sqrtMinPrice: configState.sqrtMinPrice,
-        sqrtMaxPrice: configState.sqrtMaxPrice,
+        tokenAMint,
+        tokenBMint,
+        activationPoint: null,
+        tokenAAmount: tokenAAmount,
+        tokenBAmount: tokenBAmount,
         initSqrtPrice,
-        liquidityDelta,
-        poolFees,
-        hasAlphaVault: false,
-        collectFeeMode: 0,
-        activationPoint: new BN(0),
-        activationType: 0,
-        tokenAProgram:
-          opts.tokenAProgram ||
-          new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-        tokenBProgram:
-          opts.tokenBProgram ||
-          new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+        liquidityDelta: liquidityDelta,
+        tokenAProgram: TOKENA_PROGRAM_ID,
+        tokenBProgram: TOKENB_PROGRAM_ID,
       });
 
-      // Sign and send the transaction
-      const txId = await this.connection.sendTransaction(tx, [
-        this.wallet,
-        positionNftKeypair,
-      ]);
-      await this.connection.confirmTransaction(txId);
-
+      console.log(positionNftKeypair.publicKey.toString());
+      const txId = await this.signAndBroadcastTx(
+        createPoolTx,
+        positionNftKeypair
+      );
       console.log("Pool created", {
         poolId: pool.toString(),
-        positionId: position.toString(),
+        positionId: positionNftKeypair.publicKey,
         txId,
       });
 
       // Return the pool ID, position ID, and transaction ID
       return {
         poolId: pool.toString(),
-        positionId: position.toString(),
+        positionId: positionNftKeypair.publicKey.toString(),
         txId,
       };
     } catch (error) {
@@ -281,21 +314,12 @@ export class MeteorClient {
         tokenBMint: poolState.tokenBMint,
         tokenAVault: poolState.tokenAVault,
         tokenBVault: poolState.tokenBVault,
-        tokenAProgram: new PublicKey(
-          "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ),
-        tokenBProgram: new PublicKey(
-          "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ),
+        tokenAProgram: TOKENA_PROGRAM_ID,
+        tokenBProgram: TOKENB_PROGRAM_ID,
       });
 
       const tx = addLiquidityTx;
-      tx.sign(this.wallet);
-
-      const txId = await this.connection.sendRawTransaction(tx.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: "confirmed",
-      });
+      const txId = await this.signAndBroadcastTx(tx);
 
       console.log("Liquidity added", { txId });
 
@@ -317,44 +341,29 @@ export class MeteorClient {
       const position = new PublicKey(positionId);
 
       const poolState = await this.cpAmm.fetchPoolState(pool);
-      const positionState = await this.cpAmm.fetchPositionState(position);
 
-      const positionNftAccount = await this.connection.getTokenAccountsByOwner(
-        this.wallet.publicKey,
-        { mint: positionState.nftMint }
-      );
-
-      if (positionNftAccount.value.length === 0) {
-        throw new Error("Position NFT account not found");
-      }
-
+      console.log(derivePositionNftAccount(position));
+      // Remove all liquidity
       const removeAllLiquidityTx = await this.cpAmm.removeAllLiquidity({
         owner: this.wallet.publicKey,
         pool,
         position,
-        positionNftAccount: positionNftAccount.value[0].pubkey,
+        positionNftAccount: derivePositionNftAccount(position),
         tokenAAmountThreshold: new BN(0), // No minimum threshold
         tokenBAmountThreshold: new BN(0), // No minimum threshold
         tokenAMint: poolState.tokenAMint,
         tokenBMint: poolState.tokenBMint,
         tokenAVault: poolState.tokenAVault,
         tokenBVault: poolState.tokenBVault,
-        tokenAProgram: new PublicKey(
-          "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ),
-        tokenBProgram: new PublicKey(
-          "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ),
+        tokenAProgram: TOKENA_PROGRAM_ID,
+        tokenBProgram: TOKENB_PROGRAM_ID,
         vestings: [],
         currentPoint: new BN(0),
       });
 
+      // Build and send the transaction
       const tx = removeAllLiquidityTx;
-      tx.sign(this.wallet);
-      const txId = await this.connection.sendRawTransaction(tx.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: "confirmed",
-      });
+      const txId = await this.signAndBroadcastTx(tx);
 
       console.log("Liquidity removed", { txId });
 
@@ -369,35 +378,31 @@ export class MeteorClient {
    * Close a position after all liquidity has been removed
    * @param positionId - ID of the position
    */
-  async closePosition(positionId: string) {
+  async closePosition(poolId: string, positionId: string) {
     try {
       const position = new PublicKey(positionId);
 
-      const positionState = await this.cpAmm.fetchPositionState(position);
+      const positionNftAccount = derivePositionNftAccount(position);
 
-      const positionNftAccount = await this.connection.getTokenAccountsByOwner(
-        this.wallet.publicKey,
-        { mint: positionState.nftMint }
-      );
+      // const positionNftAccount = await this.connection.getTokenAccountsByOwner(
+      //   this.wallet.publicKey,
+      //   { mint: positionState.nftMint }
+      // );
 
-      if (positionNftAccount.value.length === 0) {
-        throw new Error("Position NFT account not found");
-      }
+      // if (positionNftAccount.value.length === 0) {
+      //   throw new Error("Position NFT account not found");
+      // }
 
       const closePositionTx = await this.cpAmm.closePosition({
         owner: this.wallet.publicKey,
-        pool: positionState.pool,
+        pool: new PublicKey(poolId),
         position,
-        positionNftMint: positionState.nftMint,
-        positionNftAccount: positionNftAccount.value[0].pubkey,
+        positionNftMint: position,
+        positionNftAccount: positionNftAccount,
       });
 
       const tx = closePositionTx;
-      tx.sign(this.wallet);
-      const txId = await this.connection.sendRawTransaction(tx.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: "confirmed",
-      });
+      const txId = await this.signAndBroadcastTx(tx);
 
       console.log("Position closed", { txId });
 
@@ -406,5 +411,22 @@ export class MeteorClient {
       console.error("Error closing position:", error);
       throw error;
     }
+  }
+
+  async signAndBroadcastTx(tx: Transaction, otherSigner?: Keypair) {
+    const blockhash = await getLatestBlockhash();
+    tx.feePayer = this.wallet.publicKey;
+    tx.recentBlockhash = blockhash;
+    if (otherSigner) {
+      tx.sign(this.wallet, otherSigner);
+    } else {
+      tx.sign(this.wallet);
+    }
+    console.log(this.wallet.publicKey.toString());
+    const txId = await this.connection.sendRawTransaction(tx.serialize(), {
+      skipPreflight: false,
+      preflightCommitment: "confirmed",
+    });
+    return txId;
   }
 }

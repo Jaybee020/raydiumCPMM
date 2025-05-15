@@ -12,6 +12,7 @@ import { RaydiumClient } from "../blockchain/raydium/Raydium";
 import { CronJob } from "cron";
 import { getSPLBalance, sleep } from "../../utils";
 import { MeteorClient } from "../blockchain/raydium/Meteora";
+import { PublicKey } from "@solana/web3.js";
 
 export const txQueue = new Queue(
   "txQueue",
@@ -41,15 +42,16 @@ export async function runBotRaydium() {
     mintBamount: SOL_AMOUNT_TO_DEPOSIT,
   });
 
-  if (!createPoolOutput || !createPoolOutput.txId)
+  if (!createPoolOutput || !createPoolOutput.txId || !createPoolOutput.lpMint)
     throw new Error("Pool creation failed");
 
   const poolId = createPoolOutput.poolId; // Poolid Created from above
   const lpMint = createPoolOutput.lpMint;
 
-  // const poolId = "F4AwVj7EneaDLvgA7Lrfd6Pk7emgbSfip3Mmfhqc3pn1";
-  // const lpMint = "AKgJoE2jeHvRKHeirYNzofvzF1p1H7sDC7spbmMMfjxS";
-  await sleep(5000);
+  // const poolId = "4r1C7N5fejpYNd23BZCfEh1gYi7NrjH5bTWfxriM1M2S";
+  // const lpMint = new PublicKey("H1ssQYvvXvAUC3p32jco98iPXfnZdUoqu1RNvVqoMfY5");
+
+  // await sleep(5000);
 
   //     await coder.deposit(poolId, "1");
   //how do I get amount of LP to remove
@@ -77,12 +79,12 @@ export async function runBotMeteora() {
 
   await sleep(5000);
 
-  const tokenA = createTokenOutput.mintAddress; //token Address of token deployed from above
+  const tokenA = "A6urM3dVVsZGxtRdejhW6i73iXAA6Nb8dfAnxe5YBbn4"; //createTokenOutput.mintAddress; //token Address of token deployed from above
   const tokenB = SOL_MINT;
   const createPoolOutput = await coder.createPool({
     tokenA,
     tokenB,
-    mintAamount: Math.floor(tokenDetails.supply * 1), //deposit 99% supply
+    mintAamount: Math.floor(tokenDetails.supply * 0.1), //deposit 99% supply
     mintBamount: SOL_AMOUNT_TO_DEPOSIT,
   });
 
@@ -92,9 +94,11 @@ export async function runBotMeteora() {
   const poolId = createPoolOutput.poolId; // Poolid Created from above
   const positionId = createPoolOutput.positionId;
 
-  // const poolId = "F4AwVj7EneaDLvgA7Lrfd6Pk7emgbSfip3Mmfhqc3pn1";
-  // const lpMint = "AKgJoE2jeHvRKHeirYNzofvzF1p1H7sDC7spbmMMfjxS";
   await sleep(5000);
+
+  // const poolId = "BV8gSML8N8xFSrCdJKU59yMbdZaFgQexNnxLiPsfC1S7";
+  // const lpMint = "AKgJoE2jeHvRKHeirYNzofvzF1p1H7sDC7spbmMMfjxS";
+  // const positionId = "YfHMLheu1kXjVHnYo1vazvbBFUjm6GxEan8D1DdGXVf";
 
   // await coder.addLiquidity(
   //   poolId,
@@ -105,7 +109,7 @@ export async function runBotMeteora() {
   //how do I get amount of LP to remove
 
   await coder.removeAllLiquidity(poolId, positionId);
-  await coder.closePosition(positionId);
+  // await coder.closePosition(poolId, positionId);
 }
 
 //Consumer queue process to be performed in background

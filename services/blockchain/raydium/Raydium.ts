@@ -257,7 +257,7 @@ export class RaydiumClient {
       });
       return {
         poolId: poolKeys?.poolId,
-        lpMint: poolKeys?.lpMint,
+        lpMint: new PublicKey(poolKeys?.lpMint),
         txId,
       };
     }

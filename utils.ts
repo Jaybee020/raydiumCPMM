@@ -5,6 +5,7 @@ import {
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { PinataSDK } from "pinata";
+import { rpcConnection } from "./constants";
 
 const VALID_PROGRAM_ID = new Set([
   CREATE_CPMM_POOL_PROGRAM.toBase58(),
@@ -32,6 +33,7 @@ export async function getSPLBalance(
   allowOffCurve = false
 ) {
   try {
+    console.log(mintAddress.toString(), pubKey.toString());
     const ata = getAssociatedTokenAddressSync(
       mintAddress,
       pubKey,
@@ -53,17 +55,15 @@ export async function uploadMetadata(metadata: any) {
       pinataGateway: process.env.PINATA_GATEWAY!,
     });
 
-    const upload = await pinata.upload.public.json({
-      id: 2,
-      name: "Bob Smith",
-      email: "bob.smith@example.com",
-      age: 34,
-      isActive: false,
-      roles: ["user"],
-    });
+    const upload = await pinata.upload.public.json(metadata);
     return `https://gateway.pinata.cloud/ipfs/${upload.cid}`;
   } catch (error) {
     console.error(error);
     return "";
   }
+}
+
+export async function getLatestBlockhash() {
+  const blockhash = await rpcConnection.getLatestBlockhash();
+  return blockhash.blockhash;
 }
