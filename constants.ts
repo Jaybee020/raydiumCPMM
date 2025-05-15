@@ -1,6 +1,6 @@
 import { Raydium, LiquidityPoolKeys } from "@raydium-io/raydium-sdk-v2";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
-import { clusterApiUrl, Connection, Keypair } from "@solana/web3.js";
+import { Connection, Keypair } from "@solana/web3.js";
 import { PublicKey } from "@solana/web3.js";
 
 import { config } from "dotenv";

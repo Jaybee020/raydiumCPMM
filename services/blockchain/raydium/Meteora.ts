@@ -31,7 +31,7 @@ import {
   AuthorityType,
   createSetAuthorityInstruction,
 } from "@solana/spl-token";
-import { getLatestBlockhash, uploadMetadata } from "../../../utils";
+import { getLatestBlockhash, sleep, uploadMetadata } from "../../../utils";
 
 const SHOULD_REVOKE_AUTHORITY = true;
 export class MeteorClient {
@@ -106,9 +106,10 @@ export class MeteorClient {
         //@ts-ignore
         tokenOwner: this.wallet.publicKey,
         tokenStandard: TokenStandard.Fungible,
-      }).sendAndConfirm(this.umi);
+      }).send(this.umi);
 
       console.log(`Successfully minted tokens (${mint.publicKey})`);
+      await sleep(8000);
 
       if (SHOULD_REVOKE_AUTHORITY) {
         const revokeTransaction = new Transaction();
@@ -144,7 +145,7 @@ export class MeteorClient {
 
       return {
         mintAddress: mint.publicKey.toString(),
-        txId: tx.signature,
+        txId: tx,
       };
     } catch (error) {
       console.error("Error minting tokens:", error);
