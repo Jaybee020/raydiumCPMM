@@ -1,27 +1,27 @@
 {
-    "name": "Perpetual Cycle Token",
-    "symbol": "PERP",
-    "description": "A token generated for a new perpetual cycle in the system. Each token represents a unique cycle.",
-    "image": "https://res.cloudinary.com/seyi-codes/image/upload/v1747102661/APbP7hYraQeMQ4y8apApy3zeeHCkNcd6_v1qvcj.png",
-    "seller_fee_basis_points": 0,
-    "attributes": [
-        {
-            "trait_type": "Token Series",
-            "value": "Perpetual Cycle"
-        }
-    ],
-    "properties": {
-        "files": [
-            {
-                "uri": "https://res.cloudinary.com/seyi-codes/image/upload/v1747102661/APbP7hYraQeMQ4y8apApy3zeeHCkNcd6_v1qvcj.png",
-                "type": "image/png"
-            }
-        ],
-        "category": "image"
-    },
-    "extensions": {
-        "website": "https://yourwebsite.com",
-        "telegram": "https://t.me/PerpRug",
-        "twitter": "https://x.com/yourtwitterhandle"
+  "name": "Perpetual Cycle Token",
+  "symbol": "PERP",
+  "description": "A token generated for a new perpetual cycle in the system. Each token represents a unique cycle.",
+  "image": "https://res.cloudinary.com/seyi-codes/image/upload/v1747102661/APbP7hYraQeMQ4y8apApy3zeeHCkNcd6_v1qvcj.png",
+  "seller_fee_basis_points": 0,
+  "attributes": [
+    {
+      "trait_type": "Token Series",
+      "value": "Perpetual Cycle"
     }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "https://res.cloudinary.com/seyi-codes/image/upload/v1747102661/APbP7hYraQeMQ4y8apApy3zeeHCkNcd6_v1qvcj.png",
+        "type": "image/png"
+      }
+    ],
+    "category": "image"
+  },
+  "extensions": {
+    "website": "https://yourwebsite.com",
+    "telegram": "https://t.me/PerpRug",
+    "twitter": "https://x.com/yourtwitterhandle"
+  }
 }

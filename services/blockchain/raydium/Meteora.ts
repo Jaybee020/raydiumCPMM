@@ -27,10 +27,13 @@ import {
   derivePositionAddress,
   derivePositionNftAccount,
 } from "@meteora-ag/cp-amm-sdk";
-import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  AuthorityType,
+  createSetAuthorityInstruction,
+} from "@solana/spl-token";
 import { getLatestBlockhash, uploadMetadata } from "../../../utils";
 
-TOKEN_PROGRAM_ID;
+const SHOULD_REVOKE_AUTHORITY = true;
 export class MeteorClient {
   private connection: Connection;
   private wallet: Keypair;
@@ -61,7 +64,6 @@ export class MeteorClient {
   async createTokenWithMetadata(opts: {
     name: string;
     symbol: string;
-    uri: string;
     decimals?: number;
     supply?: number;
     description?: string;
@@ -69,7 +71,6 @@ export class MeteorClient {
     twitter?: string;
     telegram?: string;
     website?: string;
-
   }) {
     try {
       const mint = generateSigner(this.umi);
@@ -78,13 +79,11 @@ export class MeteorClient {
       const metadata = {
         name: opts.name,
         symbol: opts.symbol,
-        description: "A token generated for a new perpetual cycle in the system. Each token represents a unique cycle.",
-        image: "https://res.cloudinary.com/seyi-codes/image/upload/v1747102661/APbP7hYraQeMQ4y8apApy3zeeHCkNcd6_v1qvcj.png",
-        website: "https://perprug.fun",
-
-        twitter: "https://x.com/PerpRug",
-        telegram: "https://t.me/PerpRug",
-
+        description: opts.description,
+        image: opts.image,
+        website: opts.website,
+        twitter: opts.twitter,
+        telegram: opts.telegram,
       };
 
       // Calculate token supply with decimals
@@ -111,7 +110,42 @@ export class MeteorClient {
 
       console.log(`Successfully minted tokens (${mint.publicKey})`);
 
-      return { mintAddress: mint.publicKey.toString(), txId: tx.signature };
+      if (SHOULD_REVOKE_AUTHORITY) {
+        const revokeTransaction = new Transaction();
+
+        revokeTransaction.add(
+          createSetAuthorityInstruction(
+            new PublicKey(mint.publicKey.toString()),
+            this.wallet.publicKey,
+            AuthorityType.MintTokens,
+            null
+          )
+        );
+
+        // Add instruction to revoke freeze authority
+        revokeTransaction.add(
+          createSetAuthorityInstruction(
+            new PublicKey(mint.publicKey.toString()),
+            this.wallet.publicKey,
+            AuthorityType.FreezeAccount,
+            null
+          )
+        );
+
+        // Sign and send the transaction
+        const revokeAuthorityTxId = await this.signAndBroadcastTx(
+          revokeTransaction
+        );
+
+        console.log(
+          `Successfully revoked mint and freeze authorities (${mint.publicKey})`
+        );
+      }
+
+      return {
+        mintAddress: mint.publicKey.toString(),
+        txId: tx.signature,
+      };
     } catch (error) {
       console.error("Error minting tokens:", error);
       throw error;
