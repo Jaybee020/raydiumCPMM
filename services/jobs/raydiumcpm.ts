@@ -14,10 +14,10 @@ import { getSPLBalance, sleep } from "../../utils";
 import { MeteorClient } from "../blockchain/raydium/Meteora";
 import { PublicKey } from "@solana/web3.js";
 
-export const txQueue = new Queue(
-  "txQueue",
-  `redis://${REDIS_URL || "127.0.0.1:6379"}`
-);
+// export const txQueue = new Queue(
+//   "txQueue",
+//   `redis://${REDIS_URL || "127.0.0.1:6379"}`
+// );
 
 export async function runBotRaydium() {
   console.log("Started Job Raydium");
@@ -69,17 +69,17 @@ export async function runBotMeteora() {
   console.log("Started Job Meteora");
   const coder = new MeteorClient(keypair.secretKey as any);
 
-  const createTokenOutput = await coder.createTokenWithMetadata(tokenDetails);
-  if (
-    !createTokenOutput ||
-    !createTokenOutput.mintAddress ||
-    !createTokenOutput.txId
-  )
-    throw new Error("Token creation failed");
+  // const createTokenOutput = await coder.createTokenWithMetadata(tokenDetails);
+  // if (
+  //   !createTokenOutput ||
+  //   !createTokenOutput.mintAddress ||
+  //   !createTokenOutput.txId
+  // )
+  //   throw new Error("Token creation failed");
 
-  await sleep(5000);
+  // await sleep(5000);
 
-  const tokenA = "A6urM3dVVsZGxtRdejhW6i73iXAA6Nb8dfAnxe5YBbn4"; //createTokenOutput.mintAddress; //token Address of token deployed from above
+  const tokenA = "AvofckpAemUUpW4WAT2yEugxaUMpM1gsePr8P54Netwk"; //createTokenOutput.mintAddress; //token Address of token deployed from above
   const tokenB = SOL_MINT;
   const createPoolOutput = await coder.createPool({
     tokenA,
@@ -113,27 +113,28 @@ export async function runBotMeteora() {
 }
 
 //Consumer queue process to be performed in background
-txQueue.process(async function (job, done) {
-  try {
-    await runBotRaydium();
-    done();
-  } catch (error: any) {
-    console.error(error);
-    done(error);
-  }
-});
+// txQueue.process(async function (job, done) {
+//   try {
+//     await runBotRaydium();
+//     done();
+//   } catch (error: any) {
+//     console.error(error);
+//     done(error);
+//   }
+// });
 
 export const txCron = new CronJob("* */1 * * *", async function () {
   try {
-    await txQueue.add(
-      {},
-      {
-        attempts: 3,
-        backoff: 3000,
-        removeOnComplete: true,
-        removeOnFail: true,
-      }
-    );
+    await runBotMeteora();
+    // await txQueue.add(
+    //   {},
+    //   {
+    //     attempts: 3,
+    //     backoff: 3000,
+    //     removeOnComplete: true,
+    //     removeOnFail: true,
+    //   }
+    // );
   } catch (error) {
     console.error(error);
   }

@@ -364,7 +364,6 @@ export class MeteorClient {
       // Build and send the transaction
       const tx = removeAllLiquidityTx;
       const txId = await this.signAndBroadcastTx(tx);
-
       console.log("Liquidity removed", { txId });
 
       return { txId };
