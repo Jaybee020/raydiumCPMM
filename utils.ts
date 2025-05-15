@@ -4,6 +4,7 @@ import {
 } from "@raydium-io/raydium-sdk-v2";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { Connection, PublicKey } from "@solana/web3.js";
+import { PinataSDK } from "pinata";
 
 const VALID_PROGRAM_ID = new Set([
   CREATE_CPMM_POOL_PROGRAM.toBase58(),
@@ -39,8 +40,30 @@ export async function getSPLBalance(
     const balance = await connection.getTokenAccountBalance(ata, "confirmed");
     return balance.value.uiAmount;
   } catch (error) {
-    console.log(error);
+    console.error(error);
     // Account might not exist, which is fine
     return 0;
+  }
+}
+
+export async function uploadMetadata(metadata: any) {
+  try {
+    const pinata = new PinataSDK({
+      pinataJwt: process.env.PINATA_JWT!,
+      pinataGateway: process.env.PINATA_GATEWAY!,
+    });
+
+    const upload = await pinata.upload.public.json({
+      id: 2,
+      name: "Bob Smith",
+      email: "bob.smith@example.com",
+      age: 34,
+      isActive: false,
+      roles: ["user"],
+    });
+    return `https://gateway.pinata.cloud/ipfs/${upload.cid}`;
+  } catch (error) {
+    console.error(error);
+    return "";
   }
 }

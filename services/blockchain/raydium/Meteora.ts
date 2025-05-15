@@ -20,6 +20,7 @@ import { BN } from "@coral-xyz/anchor";
 import { rpcConnection, SOLANA_RPC_URL } from "../../../constants";
 import { CpAmm, PoolFeesParams } from "@meteora-ag/cp-amm-sdk";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { uploadMetadata } from "../../../utils";
 
 TOKEN_PROGRAM_ID;
 export class MeteorClient {
@@ -80,13 +81,15 @@ export class MeteorClient {
         .mul(new BN(10).pow(new BN(opts.decimals || 9)))
         .toString();
 
+      const uri = await uploadMetadata(metadata);
+
       // Create token with metadata and mint the supply
       const tx = await createAndMint(this.umi, {
         mint,
         authority: this.umi.identity,
         name: opts.name,
         symbol: opts.symbol,
-        uri: opts.uri || "",
+        uri: uri,
         sellerFeeBasisPoints: percentAmount(0),
         decimals: opts.decimals || 9,
         amount: BigInt(totalSupplyWithDecimals),

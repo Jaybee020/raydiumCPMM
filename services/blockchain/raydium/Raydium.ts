@@ -37,7 +37,7 @@ import {
   wallet,
 } from "../../../constants";
 import { BN } from "@coral-xyz/anchor";
-import { isValidCpmm } from "../../../utils";
+import { isValidCpmm, uploadMetadata } from "../../../utils";
 import Decimal from "decimal.js";
 
 export interface MetadataInput {
@@ -102,7 +102,7 @@ export class RaydiumClient {
   async createTokenWithMetadata(opts: {
     name: string;
     symbol: string;
-    uri: string;
+    uri?: string;
     decimals?: number;
     supply?: number;
     description?: string;
@@ -122,8 +122,8 @@ export class RaydiumClient {
         twitter: opts.twitter || "",
         telegram: opts.telegram || "",
       };
-
-      const uri = "";
+      const uri = await uploadMetadata(metadata);
+      // const uri = "";
       console.log(`Successfully uploaded metadata to ${uri}`);
       const totalSupplyWithDecimals = new Decimal(opts.supply || 10000000000)
         .mul(10 ** (opts.decimals || 9))
