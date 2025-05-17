@@ -84,6 +84,13 @@ export class MeteorClient {
         website: opts.website,
         twitter: opts.twitter,
         telegram: opts.telegram,
+        attributes: {
+          decimals: opts.decimals,
+          supply: opts.supply,
+          website: opts.website,
+          telegram: opts.telegram,
+          twitter: opts.twitter,
+        },
       };
 
       // Calculate token supply with decimals
